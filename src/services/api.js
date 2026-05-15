@@ -51,16 +51,75 @@ export async function login(username, password) {
 // -------------------------
 export async function apiGetEventos() {
   const res = await fetch(`${BASE_URL}/eventos/`, {
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json" },
   });
+
+  if (!res.ok) throw new Error("Error al cargar eventos");
+
   return await res.json();
 }
 
 export async function apiGetEvento(id) {
   const res = await fetch(`${BASE_URL}/eventos/${id}/`, {
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json" },
   });
+
+  if (!res.ok) throw new Error("Error al cargar el evento");
+
   return await res.json();
+}
+
+export async function apiCreateEvento(data) {
+  const res = await fetch(`${BASE_URL}/eventos/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return await res.json();
+}
+
+export async function apiUpdateEvento(id, data) {
+  const res = await fetch(`${BASE_URL}/eventos/${id}/`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return await res.json();
+}
+
+export async function apiDeleteEvento(id) {
+  const res = await fetch(`${BASE_URL}/eventos/${id}/`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  if (!res.ok && res.status !== 204) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return true;
 }
 
 // -------------------------
@@ -68,8 +127,46 @@ export async function apiGetEvento(id) {
 // -------------------------
 export async function apiGetInscripcionesEvento(id) {
   const res = await fetch(`${BASE_URL}/eventos/${id}/inscripciones/`, {
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json" },
   });
+
+  if (!res.ok) throw new Error("Error al cargar inscripciones");
+
+  return await res.json();
+}
+
+export async function apiCreateInscripcionEvento(eventoId, data) {
+  const res = await fetch(`${BASE_URL}/eventos/${eventoId}/inscripciones/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return await res.json();
+}
+
+export async function apiCancelarInscripcion(inscripcionId) {
+  const res = await fetch(`${BASE_URL}/inscripciones/${inscripcionId}/cancelar/`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
   return await res.json();
 }
 
@@ -78,8 +175,11 @@ export async function apiGetInscripcionesEvento(id) {
 // -------------------------
 export async function apiGetUsuarios() {
   const res = await fetch(`${BASE_URL}/usuarios/`, {
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json" },
   });
+
+  if (!res.ok) throw new Error("Error al cargar usuarios");
+
   return await res.json();
 }
 
@@ -88,8 +188,11 @@ export async function apiGetUsuarios() {
 // -------------------------
 export async function apiGetCategorias() {
   const res = await fetch(`${BASE_URL}/categorias/`, {
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json" },
   });
+
+  if (!res.ok) throw new Error("Error al cargar categorías");
+
   return await res.json();
 }
 

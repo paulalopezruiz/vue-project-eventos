@@ -3,6 +3,8 @@ import { useAuthStore } from '@/stores/auth.js';
 
 import DashboardView from '@/views/DashboardView.vue';
 import EventsListView from '@/views/EventsListView.vue';
+import EventCreateView from '@/views/EventCreateView.vue';
+import EventEditView from '@/views/EventEditView.vue';
 import EventDetailView from '@/views/EventDetailView.vue';
 import UsersListView from '@/views/UsersListView.vue';
 import UserDetailView from '@/views/UserDetailView.vue';
@@ -11,18 +13,60 @@ import LoginView from '@/views/LoginView.vue';
 
 const routes = [
   // LOGIN
-  { path: '/login', component: LoginView },
+  {
+    path: '/login',
+    component: LoginView,
+  },
 
-  // ⭐ RUTAS PÚBLICAS
-  { path: '/', redirect: '/eventos' },
-  { path: '/eventos', component: EventsListView },
-  { path: '/eventos/:id', component: EventDetailView, props: true },
+  // RUTA PRINCIPAL
+  {
+    path: '/',
+    redirect: '/eventos',
+  },
 
-  // ⭐ RUTAS PRIVADAS (solo admin)
-  { path: '/dashboard', component: DashboardView, meta: { requiresAdmin: true } },
-  { path: '/usuarios', component: UsersListView, meta: { requiresAdmin: true } },
-  { path: '/usuarios/:dni', component: UserDetailView, props: true, meta: { requiresAdmin: true } },
-  { path: '/inscripciones', component: InscriptionsListView, meta: { requiresAdmin: true } },
+  // EVENTOS
+  {
+    path: '/eventos',
+    component: EventsListView,
+  },
+  {
+    path: '/eventos/crear',
+    component: EventCreateView,
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/eventos/:id/editar',
+    component: EventEditView,
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/eventos/:id',
+    component: EventDetailView,
+    props: true,
+  },
+
+  // ADMIN
+  {
+    path: '/dashboard',
+    component: DashboardView,
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/usuarios',
+    component: UsersListView,
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/usuarios/:dni',
+    component: UserDetailView,
+    props: true,
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/inscripciones',
+    component: InscriptionsListView,
+    meta: { requiresAdmin: true },
+  },
 ];
 
 const router = createRouter({
@@ -30,14 +74,14 @@ const router = createRouter({
   routes,
 });
 
-// ⭐ PROTECCIÓN DE RUTAS
+// Protección de rutas privadas
 router.beforeEach((to) => {
   const auth = useAuthStore();
 
-  // Permitir login siempre
-  if (to.path === '/login') return true;
+  if (to.path === '/login') {
+    return true;
+  }
 
-  // Si requiere admin y NO lo es → fuera
   if (to.meta.requiresAdmin && auth.userRole !== 'ADMIN') {
     return '/eventos';
   }
