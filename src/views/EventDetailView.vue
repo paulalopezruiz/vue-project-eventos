@@ -129,6 +129,7 @@
               <td>{{ ins.codigo_inscripcion }}</td>
               <td>{{ ins.usuario.nombre }} {{ ins.usuario.apellidos }}</td>
               <td>{{ ins.fecha_inscripcion }}</td>
+
               <td>
                 <span
                   class="badge"
@@ -141,7 +142,23 @@
                   {{ ins.estado }}
                 </span>
               </td>
-              <td>{{ ins.confirmacion_asistencia ? 'Sí' : 'No' }}</td>
+
+              <td>
+                <span
+                  class="badge"
+                  :class="ins.confirmacion_asistencia ? 'bg-success' : 'bg-secondary'"
+                >
+                  {{ ins.confirmacion_asistencia ? 'Sí' : 'No' }}
+                </span>
+
+                <button
+                  v-if="auth.userRole === 'ADMIN' && ins.estado !== 'CANCELADA'"
+                  class="btn btn-outline-primary btn-sm ms-2"
+                  @click="cambiarAsistencia(ins)"
+                >
+                  {{ ins.confirmacion_asistencia ? 'Quitar' : 'Marcar' }}
+                </button>
+              </td>
 
               <td v-if="auth.userRole === 'ADMIN'">
                 <button
@@ -186,7 +203,8 @@ import {
   apiDeleteEvento,
   apiGetUsuarios,
   apiCreateInscripcionEvento,
-  apiCancelarInscripcion
+  apiCancelarInscripcion,
+  apiToggleAsistenciaInscripcion
 } from '@/services/api.js';
 
 const route = useRoute();
@@ -272,6 +290,16 @@ async function cancelarInscripcion(inscripcion) {
   } catch (e) {
     console.error(e);
     alert("No se pudo cancelar la inscripción.");
+  }
+}
+
+async function cambiarAsistencia(inscripcion) {
+  try {
+    await apiToggleAsistenciaInscripcion(inscripcion.id);
+    await inscripcionesStore.fetchByEvento(evento.value.id);
+  } catch (e) {
+    console.error(e);
+    alert("No se pudo actualizar la asistencia.");
   }
 }
 </script>

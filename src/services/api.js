@@ -170,6 +170,23 @@ export async function apiCancelarInscripcion(inscripcionId) {
   return await res.json();
 }
 
+export async function apiToggleAsistenciaInscripcion(inscripcionId) {
+  const res = await fetch(`${BASE_URL}/inscripciones/${inscripcionId}/asistencia/`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return await res.json();
+}
+
 // -------------------------
 // USUARIOS
 // -------------------------
