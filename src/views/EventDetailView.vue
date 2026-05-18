@@ -112,76 +112,13 @@
           Cargando inscripciones...
         </div>
 
-        <table v-else class="table table-hover">
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Usuario</th>
-              <th>Fecha inscripción</th>
-              <th>Estado</th>
-              <th>Asistencia</th>
-              <th v-if="auth.userRole === 'ADMIN'">Acciones</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr v-for="ins in inscripciones" :key="ins.id">
-              <td>{{ ins.codigo_inscripcion }}</td>
-              <td>{{ ins.usuario.nombre }} {{ ins.usuario.apellidos }}</td>
-              <td>{{ ins.fecha_inscripcion }}</td>
-
-              <td>
-                <span
-                  class="badge"
-                  :class="{
-                    'bg-success': ins.estado === 'CONFIRMADA',
-                    'bg-warning': ins.estado === 'LISTA_ESPERA',
-                    'bg-danger': ins.estado === 'CANCELADA'
-                  }"
-                >
-                  {{ ins.estado }}
-                </span>
-              </td>
-
-              <td>
-                <span
-                  class="badge"
-                  :class="ins.confirmacion_asistencia ? 'bg-success' : 'bg-secondary'"
-                >
-                  {{ ins.confirmacion_asistencia ? 'Sí' : 'No' }}
-                </span>
-
-                <button
-                  v-if="auth.userRole === 'ADMIN' && ins.estado !== 'CANCELADA'"
-                  class="btn btn-outline-primary btn-sm ms-2"
-                  @click="cambiarAsistencia(ins)"
-                >
-                  {{ ins.confirmacion_asistencia ? 'Quitar' : 'Marcar' }}
-                </button>
-              </td>
-
-              <td v-if="auth.userRole === 'ADMIN'">
-                <button
-                  v-if="ins.estado !== 'CANCELADA'"
-                  class="btn btn-outline-danger btn-sm"
-                  @click="cancelarInscripcion(ins)"
-                >
-                  Cancelar
-                </button>
-
-                <span v-else class="text-muted small">
-                  Cancelada
-                </span>
-              </td>
-            </tr>
-
-            <tr v-if="inscripciones.length === 0">
-              <td colspan="6" class="text-center text-muted py-4">
-                No hay inscripciones para este evento.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <InscripcionesTable
+          v-else
+          :inscripciones="inscripciones"
+          :is-admin="auth.userRole === 'ADMIN'"
+          @cancelar="cancelarInscripcion"
+          @cambiar-asistencia="cambiarAsistencia"
+        />
       </div>
     </div>
   </div>
@@ -199,6 +136,8 @@ import { storeToRefs } from 'pinia';
 import { useEventosStore } from '@/stores/eventos.js';
 import { useInscripcionesStore } from '@/stores/inscripciones.js';
 import { useAuthStore } from '@/stores/auth.js';
+import InscripcionesTable from '@/components/InscripcionesTable.vue';
+
 import {
   apiDeleteEvento,
   apiGetUsuarios,
@@ -231,8 +170,10 @@ const nuevaInscripcion = ref({
 
 onMounted(async () => {
   const id = Number(route.params.id);
+
   await eventosStore.fetchOne(id);
   await inscripcionesStore.fetchByEvento(id);
+
   usuarios.value = await apiGetUsuarios();
 });
 

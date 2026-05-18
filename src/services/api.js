@@ -200,6 +200,59 @@ export async function apiGetUsuarios() {
   return await res.json();
 }
 
+export async function apiCreateUsuario(data) {
+  const res = await fetch(`${BASE_URL}/usuarios/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return await res.json();
+}
+
+export async function apiUpdateUsuario(dni, data) {
+  const res = await fetch(`${BASE_URL}/usuarios/${dni}/`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return await res.json();
+}
+
+export async function apiDeleteUsuario(dni) {
+  const res = await fetch(`${BASE_URL}/usuarios/${dni}/`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  if (!res.ok && res.status !== 204) {
+    const errorData = await res.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return true;
+}
+
 // -------------------------
 // CATEGORÍAS
 // -------------------------

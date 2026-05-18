@@ -2,12 +2,17 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.js';
 
 import DashboardView from '@/views/DashboardView.vue';
+
 import EventsListView from '@/views/EventsListView.vue';
 import EventCreateView from '@/views/EventCreateView.vue';
 import EventEditView from '@/views/EventEditView.vue';
 import EventDetailView from '@/views/EventDetailView.vue';
+
 import UsersListView from '@/views/UsersListView.vue';
+import UserCreateView from '@/views/UserCreateView.vue';
+import UserEditView from '@/views/UserEditView.vue';
 import UserDetailView from '@/views/UserDetailView.vue';
+
 import InscriptionsListView from '@/views/InscriptionsListView.vue';
 import LoginView from '@/views/LoginView.vue';
 
@@ -45,21 +50,33 @@ const routes = [
     props: true,
   },
 
-  // ADMIN
-  {
-    path: '/dashboard',
-    component: DashboardView,
-    meta: { requiresAdmin: true },
-  },
+  // USUARIOS
   {
     path: '/usuarios',
     component: UsersListView,
     meta: { requiresAdmin: true },
   },
   {
+    path: '/usuarios/crear',
+    component: UserCreateView,
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/usuarios/:dni/editar',
+    component: UserEditView,
+    meta: { requiresAdmin: true },
+  },
+  {
     path: '/usuarios/:dni',
     component: UserDetailView,
     props: true,
+    meta: { requiresAdmin: true },
+  },
+
+  // ADMIN
+  {
+    path: '/dashboard',
+    component: DashboardView,
     meta: { requiresAdmin: true },
   },
   {
