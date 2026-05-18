@@ -3,6 +3,10 @@ const BASE_URL = "http://localhost:8000/api";
 let accessToken = null;
 let refreshToken = null;
 
+// -------------------------
+// TOKENS
+// -------------------------
+
 function authHeaders() {
   return accessToken
     ? { Authorization: `Bearer ${accessToken}` }
@@ -12,6 +16,7 @@ function authHeaders() {
 export function setTokens(tokens) {
   accessToken = tokens.access;
   refreshToken = tokens.refresh;
+
   localStorage.setItem("accessToken", accessToken);
   localStorage.setItem("refreshToken", refreshToken);
 }
@@ -19,6 +24,7 @@ export function setTokens(tokens) {
 export function loadTokensFromStorage() {
   const a = localStorage.getItem("accessToken");
   const r = localStorage.getItem("refreshToken");
+
   if (a && r) {
     accessToken = a;
     refreshToken = r;
@@ -28,247 +34,268 @@ export function loadTokensFromStorage() {
 export function clearTokens() {
   accessToken = null;
   refreshToken = null;
+
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
 }
 
-export async function login(username, password) {
-  const res = await fetch(`${BASE_URL}/token/`, {
+// -------------------------
+// FETCH CENTRALIZADO
+// -------------------------
+
+function refreshAccessToken() {
+  if (!refreshToken) {
+    return Promise.reject("No hay refresh token disponible");
+  }
+
+  return fetch(`${BASE_URL}/token/refresh/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      refresh: refreshToken,
+    }),
+  })
+    .then((response) => {
+      if (response.ok) {
+        return response.json();
+      }
+
+      clearTokens();
+      return Promise.reject("No se pudo renovar la sesión");
+    })
+    .then((data) => {
+      accessToken = data.access;
+      localStorage.setItem("accessToken", accessToken);
+
+      return accessToken;
+    });
+}
+
+function parseResponse(response) {
+  if (response.status === 204) {
+    return true;
+  }
+
+  const contentType = response.headers.get("content-type");
+
+  if (contentType && contentType.includes("application/json")) {
+    return response.json().then((data) => {
+      if (response.ok) {
+        return data;
+      }
+
+      return Promise.reject(JSON.stringify(data));
+    });
+  }
+
+  return response.text().then((text) => {
+    console.error("Respuesta no JSON recibida:", text);
+
+    if (response.ok) {
+      return text;
+    }
+
+    return Promise.reject(
+      `El servidor devolvió una respuesta no JSON. Código HTTP: ${response.status}`
+    );
   });
+}
 
-  if (!res.ok) throw new Error("Credenciales inválidas");
+function apiFetch(endpoint, options = {}, requiresAuth = false) {
+  const config = {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(requiresAuth ? authHeaders() : {}),
+      ...(options.headers || {}),
+    },
+  };
 
-  const data = await res.json();
-  setTokens(data);
-  return data;
+  return fetch(`${BASE_URL}${endpoint}`, config).then((response) => {
+    if (response.status === 401 && requiresAuth && refreshToken) {
+      return refreshAccessToken()
+        .then(() => {
+          const retryConfig = {
+            ...options,
+            headers: {
+              "Content-Type": "application/json",
+              ...authHeaders(),
+              ...(options.headers || {}),
+            },
+          };
+
+          return fetch(`${BASE_URL}${endpoint}`, retryConfig);
+        })
+        .then(parseResponse)
+        .catch((error) => {
+          clearTokens();
+          return Promise.reject(error);
+        });
+    }
+
+    return parseResponse(response);
+  });
+}
+
+// -------------------------
+// LOGIN
+// -------------------------
+
+export function login(username, password) {
+  return apiFetch("/token/", {
+    method: "POST",
+    body: JSON.stringify({
+      username,
+      password,
+    }),
+  })
+    .then((data) => {
+      setTokens(data);
+      return data;
+    })
+    .catch((error) => {
+      console.error("Error en login:", error);
+      return Promise.reject("No se pudo iniciar sesión. Revisa usuario, contraseña o backend.");
+    });
 }
 
 // -------------------------
 // EVENTOS
 // -------------------------
-export async function apiGetEventos() {
-  const res = await fetch(`${BASE_URL}/eventos/`, {
-    headers: { "Content-Type": "application/json" },
-  });
 
-  if (!res.ok) throw new Error("Error al cargar eventos");
-
-  return await res.json();
+export function apiGetEventos() {
+  return apiFetch("/eventos/");
 }
 
-export async function apiGetEvento(id) {
-  const res = await fetch(`${BASE_URL}/eventos/${id}/`, {
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!res.ok) throw new Error("Error al cargar el evento");
-
-  return await res.json();
+export function apiGetEvento(id) {
+  return apiFetch(`/eventos/${id}/`);
 }
 
-export async function apiCreateEvento(data) {
-  const res = await fetch(`${BASE_URL}/eventos/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiCreateEvento(data) {
+  return apiFetch(
+    "/eventos/",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return await res.json();
+    true
+  );
 }
 
-export async function apiUpdateEvento(id, data) {
-  const res = await fetch(`${BASE_URL}/eventos/${id}/`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiUpdateEvento(id, data) {
+  return apiFetch(
+    `/eventos/${id}/`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return await res.json();
+    true
+  );
 }
 
-export async function apiDeleteEvento(id) {
-  const res = await fetch(`${BASE_URL}/eventos/${id}/`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiDeleteEvento(id) {
+  return apiFetch(
+    `/eventos/${id}/`,
+    {
+      method: "DELETE",
     },
-  });
-
-  if (!res.ok && res.status !== 204) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return true;
+    true
+  );
 }
 
 // -------------------------
 // INSCRIPCIONES
 // -------------------------
-export async function apiGetInscripcionesEvento(id) {
-  const res = await fetch(`${BASE_URL}/eventos/${id}/inscripciones/`, {
-    headers: { "Content-Type": "application/json" },
-  });
 
-  if (!res.ok) throw new Error("Error al cargar inscripciones");
-
-  return await res.json();
+export function apiGetInscripcionesEvento(id) {
+  return apiFetch(`/eventos/${id}/inscripciones/`);
 }
 
-export async function apiCreateInscripcionEvento(eventoId, data) {
-  const res = await fetch(`${BASE_URL}/eventos/${eventoId}/inscripciones/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiCreateInscripcionEvento(eventoId, data) {
+  return apiFetch(
+    `/eventos/${eventoId}/inscripciones/`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return await res.json();
+    true
+  );
 }
 
-export async function apiCancelarInscripcion(inscripcionId) {
-  const res = await fetch(`${BASE_URL}/inscripciones/${inscripcionId}/cancelar/`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiCancelarInscripcion(inscripcionId) {
+  return apiFetch(
+    `/inscripciones/${inscripcionId}/cancelar/`,
+    {
+      method: "PUT",
     },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return await res.json();
+    true
+  );
 }
 
-export async function apiToggleAsistenciaInscripcion(inscripcionId) {
-  const res = await fetch(`${BASE_URL}/inscripciones/${inscripcionId}/asistencia/`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiToggleAsistenciaInscripcion(inscripcionId) {
+  return apiFetch(
+    `/inscripciones/${inscripcionId}/asistencia/`,
+    {
+      method: "PUT",
     },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return await res.json();
+    true
+  );
 }
 
 // -------------------------
 // USUARIOS
 // -------------------------
-export async function apiGetUsuarios() {
-  const res = await fetch(`${BASE_URL}/usuarios/`, {
-    headers: { "Content-Type": "application/json" },
-  });
 
-  if (!res.ok) throw new Error("Error al cargar usuarios");
-
-  return await res.json();
+export function apiGetUsuarios() {
+  return apiFetch("/usuarios/");
 }
 
-export async function apiCreateUsuario(data) {
-  const res = await fetch(`${BASE_URL}/usuarios/`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiCreateUsuario(data) {
+  return apiFetch(
+    "/usuarios/",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return await res.json();
+    true
+  );
 }
 
-export async function apiUpdateUsuario(dni, data) {
-  const res = await fetch(`${BASE_URL}/usuarios/${dni}/`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiUpdateUsuario(dni, data) {
+  return apiFetch(
+    `/usuarios/${dni}/`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
     },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return await res.json();
+    true
+  );
 }
 
-export async function apiDeleteUsuario(dni) {
-  const res = await fetch(`${BASE_URL}/usuarios/${dni}/`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
+export function apiDeleteUsuario(dni) {
+  return apiFetch(
+    `/usuarios/${dni}/`,
+    {
+      method: "DELETE",
     },
-  });
-
-  if (!res.ok && res.status !== 204) {
-    const errorData = await res.json();
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  return true;
+    true
+  );
 }
 
 // -------------------------
 // CATEGORÍAS
 // -------------------------
-export async function apiGetCategorias() {
-  const res = await fetch(`${BASE_URL}/categorias/`, {
-    headers: { "Content-Type": "application/json" },
-  });
 
-  if (!res.ok) throw new Error("Error al cargar categorías");
-
-  return await res.json();
+export function apiGetCategorias() {
+  return apiFetch("/categorias/");
 }
 
-export async function apiGetMe() {
-  const res = await fetch(`${BASE_URL}/usuarios/me/`, {
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-  });
-  return await res.json();
+// -------------------------
+// USUARIO ACTUAL
+// -------------------------
+
+export function apiGetMe() {
+  return apiFetch("/usuarios/me/", {}, true);
 }
