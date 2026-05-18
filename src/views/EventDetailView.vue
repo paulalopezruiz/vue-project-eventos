@@ -81,20 +81,6 @@
                     </option>
                   </select>
                 </div>
-
-                <div class="col-md-4 d-flex align-items-end">
-                  <div class="form-check">
-                    <input
-                      v-model="nuevaInscripcion.confirmacion_asistencia"
-                      class="form-check-input"
-                      type="checkbox"
-                      id="asistencia"
-                    />
-                    <label class="form-check-label" for="asistencia">
-                      Asistencia confirmada
-                    </label>
-                  </div>
-                </div>
               </div>
 
               <p v-if="errorInscripcion" class="text-danger mt-3">
